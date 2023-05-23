@@ -2,6 +2,9 @@
 const itemName1 = 'Desk';
 const price1 = 400;
 const url = 'https://www.amazon.co.jp/ref=nav_logo';
+const buy = () => {
+    alert('購入されました。');
+}
 </script>
 
 <template>
@@ -11,6 +14,7 @@ const url = 'https://www.amazon.co.jp/ref=nav_logo';
             <label for="">{{ itemName1 }}</label>
             <label for="">{{ price1 }}円</label>
             <a v-bind:href="url">リンク</a>
+            <button v-on:click="buy">購入</button>
         </div>
     </div>
 </template>
