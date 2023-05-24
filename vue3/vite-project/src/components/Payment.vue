@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, toRefs, watch } from 'vue'
 
 const url = 'https://www.amazon.co.jp/ref=nav_logo';
 
@@ -11,6 +11,10 @@ let item = reactive({
 const buy = (item: any) => {
     alert(item.name + '購入しました。');
 }
+const { price } = toRefs(item)
+watch(price, () => {
+    console.log(price.value);
+})
 
 </script>
 
