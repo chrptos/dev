@@ -30,7 +30,7 @@ const deleteTweet = (id: number) => {
   <div class="container">
     <h1>Twitter</h1>
     <TweetPostForm :tweets="tweets" @post-tweet="postTweet" />
-    <TweetPostList :tweets="tweets" @deleteTweet="deleteTweet" />
+    <TweetPostList :tweets="tweets" @delete-tweet="deleteTweet" />
   </div>
 </template>
 

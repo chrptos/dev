@@ -12,10 +12,10 @@ type Props = {
 
 const props = defineProps<Props>();
 
-const emit = defineEmits(['deleteTweet']);
+const emit = defineEmits(['delete-tweet']);
 
 const deleteTweet = (id: number) => {
-    emit('deleteTweet', id);
+    emit('delete-tweet', id);
 };
 
 </script>
