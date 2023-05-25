@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { reactive, toRefs, watch, ref } from 'vue'
+import { ref } from 'vue'
+import TweetPostForm from './TweetPostForm';
+import TweetList from './TweetList';
+
 
 const tweets = ref([
     { id: 1, description: 'Hello, World1' },
@@ -7,38 +10,21 @@ const tweets = ref([
     { id: 3, description: 'Hello, World3' },
     { id: 4, description: 'Hello, World4' },
 ])
-const description = ref<string>('');
 
-const postTweet = () => {
-    const newTweet = {
-        id: Math.random(),
-        description: description.value
-    };
-    tweets.value = [...tweets.value, newTweet];
-};
 
-const deleteTweet = (id: number) => {
-    tweets.value = tweets.value.filter(tweet => tweet.id !== id)
-};
 
 </script>
 
 <template>
     <div class="container">
         <h1>Twitter</h1>
-        <div class="form-container">
-            <input v-model="description" />
-            <button @click="postTweet">ツイート</button>
-        </div>
+        <TweetPostForm />
         <div v-if="tweets.length <= 0">
             {{ 'No Tweets!!' }}
         </div>
         <div class="tweet-container">
             <ul>
-                <li v-for="tweet in tweets" :key="tweet.id">
-                    <span>{{ "ID:" + tweet.id + "ツイート:" + tweet.description }}</span>
-                    <button @click="deleteTweet(tweet.id)">削除</button>
-                </li>
+                <TweetList />
             </ul>
         </div>
     </div>

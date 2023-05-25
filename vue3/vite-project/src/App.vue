@@ -1,24 +1,43 @@
 <script setup lang="ts">
-import Payment from './components/Payment.vue';
+import { ref } from 'vue'
+import TweetPostForm from './components/TweetPostForm.vue';
+import TweetPostList from './components/TweetPostList.vue';
+
+
+const tweets = ref([
+  { id: 1, description: 'Hello, World1' },
+  { id: 2, description: 'Hello, World2' },
+  { id: 3, description: 'Hello, World3' },
+  { id: 4, description: 'Hello, World4' },
+])
+
+const postTweet = (description: string) => {
+  const newTweet = {
+    id: Math.random(),
+    description: description
+  };
+  tweets.value = [...tweets.value, newTweet];
+};
+
+const deleteTweet = (id: number) => {
+  tweets.value = tweets.value.filter(tweet => tweet.id !== id);
+};
+
+
 </script>
 
 <template>
-  <Payment />
+  <div class="container">
+    <h1>Twitter</h1>
+    <TweetPostForm :tweets="tweets" @post-tweet="postTweet" />
+    <TweetPostList :tweets="tweets" @deleteTweet="deleteTweet" />
+  </div>
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+.container {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
 }
 </style>
