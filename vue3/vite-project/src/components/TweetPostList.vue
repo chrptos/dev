@@ -7,16 +7,16 @@ type Tweet = {
 }
 
 type Props = {
-    tweets: Tweet[]
+    tweets: Tweet[],
+    deleteTweet: (id: number) => void,
 }
 
 const props = defineProps<Props>();
 
-const emit = defineEmits(['delete-tweet']);
-
-const deleteTweet = (id: number) => {
-    emit('delete-tweet', id);
-};
+// const emit = defineEmits(['delete-tweet']);
+// const deleteTweet = (id: number) => {
+//     emit('delete-tweet', id);
+// };
 
 </script>
 
