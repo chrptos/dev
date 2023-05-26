@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, Ref } from 'vue';
-
+import PersonInput from './PersonInput.vue';
+import PersonList from './PersonList.vue';
 
 type Person = {
     id: number,
@@ -26,17 +27,16 @@ let persons: Ref<Person[]> = ref([
     },
 ]);
 
-const inputName = ref<string>('');
-const inputAge = ref<number>(0);
-const registerPerson = () => {
+const registerPerson = (person: Person) => {
     const newPerson = {
         id: Math.random(),
-        name: inputName.value,
-        age: inputAge.value,
+        name: person.name,
+        age: person.age,
     };
     persons.value = [...persons.value, newPerson];
     console.log(persons);
 }
+
 const deletePerson = (id: number) => {
     persons.value = persons.value.filter(person => person.id !== id)
 }
@@ -45,21 +45,9 @@ const deletePerson = (id: number) => {
 <template>
     <div class="container">
         <h1>テスト</h1>
-        <div class="person-form">
-            <span for="name">名前：</span>
-            <input type="text" v-model="inputName">
-            <span for="age">年齢：</span>
-            <input type="number" name="age" v-model="inputAge">
-            <button @click="registerPerson">送信</button>
-        </div>
+        <PersonInput @registerPerson="registerPerson" />
         <div class="person-list">
-            <ul>
-                <li v-for="person in persons" :key="person.id">
-                    <span>名前：{{ person.name }}</span>
-                    <span>年齢：{{ person.age }}</span>
-                    <button @click="deletePerson(person.id)">削除</button>
-                </li>
-            </ul>
+            <PersonList :persons="persons" @deletePerson="deletePerson" />
         </div>
     </div>
 </template>
