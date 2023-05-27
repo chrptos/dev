@@ -38,7 +38,9 @@ const registerPerson = (person: Person) => {
 }
 
 const deletePerson = (id: number) => {
-    persons.value = persons.value.filter(person => person.id !== id)
+    if (confirm('削除しますか？')) {
+        persons.value = persons.value.filter(person => person.id !== id)
+    }
 }
 </script>
 
