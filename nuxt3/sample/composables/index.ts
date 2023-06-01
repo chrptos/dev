@@ -10,3 +10,9 @@ export const useTitle = () => {
         changeTitle: changeTitle(title)
     }
 }
+
+export const useCount = () => {
+    return {
+
+    }
+}
