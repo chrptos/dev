@@ -44,3 +44,11 @@ remove docker image
 
 `docker container exec -it mycontainer bash`
 `exec`コマンドを利用することで起動中のコンテナでコマンドを実行することができる。
+
+`docker container run --name sukina-namae ubuntu`
+`--name`とつけることで起動中のコンテナ名を好きに決めることができる。
+
+## シェルとは
+人間 -> シェル -> OS(カーネル)
+シェルは人間が理解できる操作を機械語に翻訳して、OSに伝えてくれるし、逆に機械から人間の分かる言葉にしてくれたりする。
+
