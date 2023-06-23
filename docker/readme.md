@@ -48,7 +48,31 @@ remove docker image
 `docker container run --name sukina-namae ubuntu`
 `--name`とつけることで起動中のコンテナ名を好きに決めることができる。
 
+`docker container prune`を利用することで、停止済みのコンテナをまとめて`rm`することができる。
+
+`docker container run --rm ubuntu`とすると、デフォルトまたは指定したコマンドが実行されたあとに、使用済みのコンテナが自動的に削除される。
+
+`docker container rm -f {コンテナ名}`とすると、起動中のコンテナも削除される。
+
+`docker container run -d nginx`とすることでバックグラウンドで起動できる。`exec`も同じことできる。
+
+`docker container attach nginx`とすることでフォアグラウンドに戻すことができる。
+
 ## シェルとは
 人間 -> シェル -> OS(カーネル)
 シェルは人間が理解できる操作を機械語に翻訳して、OSに伝えてくれるし、逆に機械から人間の分かる言葉にしてくれたりする。
+
+## Dockerfile
+
+- Dockerfileとは、自分好みのカスタマイズされたイメージを作成できる。
+- ubuntu + nginxを利用したい場合など、imageをビルドにコマンドを実行したりなど
+- ubuntu + python や ubuntu + node をベースイメージから構築できる
+- いくらコンテナをカスタマイズしてもコンテナを作り直すと元に戻る。
+- どこにでも同じ環境を再構築したいならコンテナの元になるイメージをカスタマイズすることで、コンテナのポータビリティを担保する。
+
+`docker image build -t my-image:v1`
+docker imageを自由に名前とタグをつけて作成することができる。
+
+`docker image build .`
+カレントディレクトリにあるDockerfileからイメージを作成する。
 
