@@ -235,3 +235,30 @@ type Length<T extends readonly any[]> = T['length'];
 この実装により、`T` はイミュータブルな配列またはタプルを表し、`T['length']` でその長さ（要素数）を取得します。この型を使うと、タプルの長さをコンパイル時に確定することができます。
 
 ### Exclude
+組み込みの型ユーティリティExclude <T, U>を使用せず、Uに割り当て可能な型をTから除外する型を実装します。
+```typescript
+type Result = MyExclude<'a' | 'b' | 'c', 'a'> // 'b' | 'c'
+```
+組み込みの型ユーティリティ`Exclude<T, U>`を使用せずに、`U`に割り当て可能な型を`T`から除外する`MyExclude<T, U>`型は、条件型を使って以下のように実装できます：
+
+```typescript
+type MyExclude<T, U> = T extends U ? never : T;
+```
+
+この実装では、`T extends U ? never : T`という条件型を使用しています。これは、「もし`T`が`U`に割り当て可能なら`never`を返し、そうでなければ`T`をそのまま返す」という意味になります。`never`は型システムの底部に位置する型で、どの型にも割り当てることができません。
+
+したがって、この実装では、`T`の各型について`U`に割り当て可能かどうかをチェックし、割り当て可能な型は`never`になり、その他の型はそのまま残ります。これにより、`U`に割り当て可能な型が`T`から除外されます。
+
+例えば、`MyExclude<'a' | 'b' | 'c', 'a'>`とすると、`'a'`, `'b'`, `'c'`の各型について`'a'`に割り当て可能かどうかをチェックします。`'a'`は`'a'`に割り当て可能なので`never`になり、`'b'`と`'c'`は`'a'`に割り当て不可能なのでそのまま残ります。その結果、`'b' | 'c'`が得られます。
+
+### Awaited
+Promise ライクな型が内包する型をどのように取得すればよいでしょうか。
+
+例えば：Promise<ExampleType>という型がある場合、どのようにして ExampleType を取得すればよいでしょうか。
+```typescript
+type ExampleType = Promise<string>
+
+type Result = MyAwaited<ExampleType> // string
+```
+
+### If
