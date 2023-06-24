@@ -262,3 +262,107 @@ type Result = MyAwaited<ExampleType> // string
 ```
 
 ### If
+条件値C、 Cが truthy である場合の戻り値の型T、Cが falsy である場合の戻り値の型Fを受け取るIfを実装します。 条件値C はtrueかfalseのどちらかであることが期待されますが、T と F は任意の型をとることができます。
+```typescript
+type A = If<true, 'a', 'b'>; // expected to be 'a'
+type B = If<false, 'a', 'b'>; // expected to be 'b'
+```
+
+### Concat 
+JavaScript のArray.concat関数を型システムに実装します。この型は 2 つの引数を受け取り、受け取ったイテレータの要素を順に含む新しい配列を返します。
+```typescript
+type Concat<T extends readonly unknown[], U extends readonly unknown[]> = [...T, ...U];
+```
+TIPS:unknownはどういった型ですか
+TypeScriptにおける`unknown`型は、可能な型が何であるかを事前に知らない値を表現するための型です。これは`any`型に似ていますが、`unknown`型はより型安全です。
+
+`any`型を使用すると、TypeScriptの型システムはその値に対して何でも許可します。それは、プロパティへのアクセス、関数の呼び出し、新しい値への代入など、あらゆる操作が可能ということです。このため、`any`型を使用すると型エラーが発生しやすくなります。
+
+一方、`unknown`型を使用すると、その値に対する操作はほぼ全てが制限されます。`unknown`型の値を他の何かに割り当てる前に、その値の型を具体的に確認する必要があります（これを型ガードと言います）。
+
+したがって、`unknown`は不明な型の値を安全に扱うための手段を提供します。`unknown`型の値に対して何かをする前に、その値が期待する型であることを確認することを強制します。
+
+たとえば、以下のコードはエラーになります：
+
+```typescript
+let value: unknown;
+value.foo;  // Error: Object is of type 'unknown'.
+```
+
+型ガードを使用して型を確認すれば、その値を安全に操作できます：
+
+```typescript
+let value: unknown;
+
+if (typeof value === 'object' && value !== null) {
+  // Now TypeScript knows that `value` is an object.
+  console.log(value.foo);
+}
+```
+https://recursionist.io/learn/languages/typescript/introduction/any-unknown#:~:text=TypeScript%20unknown%E5%9E%8B&text=any%E5%9E%8B%E3%81%A8unknown%E5%9E%8B%E3%81%AE%E5%A4%A7%E3%81%8D%E3%81%AA%E9%81%95%E3%81%84%E3%81%AF%E3%80%81any,%E3%82%92%E8%A1%8C%E3%81%86%E3%81%93%E3%81%A8%E3%81%8C%E3%81%A7%E3%81%8D%E3%81%BE%E3%81%9B%E3%82%93%E3%80%82
+
+
+### Includes
+JavaScriptのArray.include関数を型システムに実装します。この型は、2 つの引数を受け取り、trueやfalseを出力しなければなりません。
+```typescript
+type isPillarMen = Includes<['Kars', 'Esidisi', 'Wamuu', 'Santana'], 'Dio'> // expected to be `false`
+```
+
+### Push
+Array.pushのジェネリックバージョンを実装します。
+```typescrip
+type Result = Push<[1, 2], '3'> // [1, 2, '3']
+```
+配列に新しい要素を追加する`Push`型を実装するには、TypeScript のタプルとスプレッド演算子を利用します。以下のように定義できます。
+
+```typescript
+type Push<T extends readonly any[], V> = [...T, V];
+```
+
+この`Push`型は2つのジェネリック型引数`T`と`V`を受け取ります。
+
+`T`は任意の要素を持つ配列（またはタプル）、`V`は配列に追加したい新しい要素です。
+
+そして、`[...T, V]`は新しい配列を作成します。この新しい配列は`T`の全ての要素と新しい要素`V`を含みます。
+
+したがって、この`Push`型は、配列`T`に新しい要素`V`を追加した結果を返します。
+
+### Unshift
+Array.unshiftの型バージョンを実装します。
+```typescript
+type Result = Unshift<[1, 2], 0> // [0, 1, 2,]
+```
+配列の先頭に新しい要素を追加する`Unshift`型を実装するには、TypeScript のタプルとスプレッド演算子を利用します。以下のように定義できます。
+
+```typescript
+type Unshift<T extends readonly any[], V> = [V, ...T];
+```
+
+この`Unshift`型は2つのジェネリック型引数`T`と`V`を受け取ります。
+
+`T`は任意の要素を持つ配列（またはタプル）、`V`は配列の先頭に追加したい新しい要素です。
+
+そして、`[V, ...T]`は新しい配列を作成します。この新しい配列は新しい要素`V`と`T`の全ての要素を含みます。
+
+したがって、この`Unshift`型は、配列`T`の先頭に新しい要素`V`を追加した結果を返します。
+
+### Parameters 
+組み込みの型ユーティリティParameters<T>を使用せず、Tからタプル型を構築する型を実装します。
+```typescript
+const foo = (arg1: string, arg2: number): void => {}
+
+type FunctionParamsType = MyParameters<typeof foo> // [arg1: string, arg2: number]
+```
+関数のパラメータのタプル型を取得する`MyParameters`型を実装するには、TypeScriptの高度な型システム、特に条件付き型と`infer`キーワードを使用します。以下のように定義できます。
+
+```typescript
+type MyParameters<T> = T extends (...args: infer P) => any ? P : never;
+```
+
+この`MyParameters`型はジェネリック型引数`T`を受け取ります。ここで`T`は任意の関数型を表します。
+
+そして、`T extends (...args: infer P) => any ? P : never`は、`T`が関数である場合（つまり`(...args: infer P) => any`の形を持つ場合）に、その関数のパラメータのタプル型`P`を返します。そうでなければ`never`型を返します。
+
+この定義では、`infer P`を使用して`T`のパラメータのタプル型を推論（inferring）します。
+
+したがって、この`MyParameters`型は、関数`T`のパラメータのタプル型を返します。
