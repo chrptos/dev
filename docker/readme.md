@@ -83,4 +83,38 @@ docker imageを自由に名前とタグをつけて作成することができ�
 ホストから好きなファイルをイメージに配置する。
 もちろんコピーしただけなのでコンテナで編集しても同期しない
 
+### ビルドコンテキスト
+`docker image build {ディレクトリパス=ビルドコンテキスト}`
+`image build`はDockerfileとビルドコンテキストからイメージを作成するコマンド
 
+クライアント（docker CLI）
+REST API
+サーバー（docker デーモン）
+
+別の場所にあっても動かせるようにREST APIが間に入っている
+例えば、PCにクライアントがあって、クラウドホストにサーバー（デーモン）があっても動くように、という目的もある。
+
+docker CLIはコンテキスト配下のファイルをすべてデーモン側に送り付ける。というのも`COPY`コマンドなどでコピーする元のファイルはdocker デーモンに送られている
+
+ビルドコンテキストはビルドするときにDockerデーモンへ送られる
+
+なので、COPY ../hello.text / など指定してもエラーになる。
+
+ただし、dockerfileを別途しているすることでエラーを回避できる
+`docker image build -f docker/Dockerfile . `
+ビルドコンテキストにもあるし、Dockerfileも場所を指定しているのでbuildは成功する。
+
+`.dockerignore`
+ビルドコンテキストから除外したいファイルがある場合に指定可能
+
+transfer contextで大きいファイルを指定するとbuildが遅くなるので、contextで指定するファイルはサイズを小さくすることを推奨
+
+`CMD ["実行コマンド", "パラメータ1", "パラメータ2"]`
+コンテナ実行時のデフォルトコマンドを設定する。ex) ubuntuだとbashコマンドがデフォルトになっている。
+Dockerfileで1度しか使えない
+複数のCMDがあるときは最後のCMDのみ有効
+Dockerfileへ`CMD ["ls","-al"]`と指定すると
+`docker image build .`
+`docker container run <imageId>`で`ls -al`が実行されるはず
+
+### レイヤー構造
