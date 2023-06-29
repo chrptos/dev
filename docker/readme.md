@@ -118,3 +118,152 @@ Dockerfileへ`CMD ["ls","-al"]`と指定すると
 `docker container run <imageId>`で`ls -al`が実行されるはず
 
 ### レイヤー構造
+イメージレイヤーはreadonly
+Dockerfileに記述した命令ごとに層が増える
+`docker image history <image_id>`でビルド後のレイヤーを確認できる。
+
+レイヤーの数が多くなるほどイメージの容量が大きくなるので、コマンドをつなげることでイメージレイヤーを少なくする
+
+レイヤーはキャッシュされるので、開発中はビルド時間を短くしたいのでRUNをたくさん記述してもいいかも
+
+### その他、Dockerfileコマンド
+ENV: 環境変数を指定可能
+ARG: `ARG {キー1}={デフォルト値}`
+RUNとrun: DockerfileのRUN命令はDockerイメージをビルドする際に使用され、一方でdocker runコマンドはそのイメージから新しいコンテナを作成して実行する際に使用されます。
+
+ARGとENVの違い
+argはイメージ作成時のみ有効
+envはイメージ作成時だけでなく、コンテナ実行時も有効
+
+`WORKDIR {ディレクトリパス}`
+RUNやCMDなので作業ディレクトリを指定する
+cdコマンドと同じ
+
+## マルチステージビルド
+ステージによって必要なソフトウェアが異なる
+hello.c　コンパイル（gccイメージ）
+COPY a.out
+CMD ./a.out（ubuntuイメージ）
+イメージビルドで作成されるイメージ
+```
+FROM gcc
+...
+
+FROM ubuntu
+COPY --from=0 /app/a.out .
+
+CMD ["./a.out"]
+```
+`--from=0`で1番目のステージからコピーするという意味
+
+### マルチステージビルドのメリット
+マルチステージビルドは、Dockerが提供する機能の一つで、単一のDockerfile内で複数のビルドステージを定義することができます。これにより、最終的なイメージのサイズを小さく保ちつつ、各ステージで異なるビルドと設定手順を使用することができます。
+
+典型的な使用例は、ソースコードのコンパイルに必要なツールを含む大きなイメージを最初のステージで作成し、そのイメージを使ってアプリケーションをビルドし、最後にビルド成果物のみを軽量なベースイメージにコピーするというものです。これにより、実行時には開発ツールやビルド環境が必要なく、より小さなイメージを作成することができます。
+```
+# ビルドステージ
+FROM golang:1.16 as builder
+
+WORKDIR /app
+
+# 必要なパッケージをダウンロード
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+# ソースコードをコピー
+COPY . .
+
+# ビルド実行
+RUN CGO_ENABLED=0 GOOS=linux go build -o myapp .
+
+# 実行ステージ
+FROM alpine:latest
+
+# ビルドステージから成果物をコピー
+COPY --from=builder /app/myapp /myapp
+
+# コンテナ起動時のコマンド
+CMD ["/myapp"]
+```
+つまり、イメージのサイズを節約できるということ。
+例えば、gccはコンパイラが入っている分、イメージサイズが大きくなる。
+実行環境だけシンプルなubuntuで実行できる
+
+開発環境やその他のビルドツールが含まれない差分でイメージが節約できる。
+
+### マルチステージビルドで複数環境を管理する
+Dockerfileをdev, prdでわける？
+- 共通部分が二重管理になる
+- ファイルが多くなり管理が煩雑になる
+マルチステージビルドなら一つのDockerfileで管理することができる
+
+```
+FROM ubuntu AS base
+RUN apt update
+CMD ["sh", "-c", "echo My database is $database"]
+
+FROM base AS development
+ENV database=dev
+
+FROM base AS production
+ENV database=prd
+```
+`docker image build --target development .`
+
+### そのほか
+`CMD ["sh", "-c", "echo My database is $database"]`
+この`CMD`命令はDockerfile内の一部であり、コンテナが起動されたときに実行するデフォルトのコマンドを定義しています。
+
+具体的には、この行は`sh -c "echo My database is $database"`というコマンドを実行します。これは、シェル(`sh`)を使って`-c`オプションに続くコマンドを実行します。
+
+このコマンドは`"echo My database is $database"`という部分を実行します。`echo`は標準出力にテキストを出力するコマンドで、ここでは`My database is`の後に`$database`という環境変数の値を出力します。つまり、コンテナが起動されたときに、`My database is `とその後に`$database`の値（環境変数`database`の値）を出力します。
+
+この`$database`という環境変数は、通常、Dockerfileの`ENV`命令や`docker run`コマンドの`-e`オプションなどを使用して設定されます。
+
+なお、`CMD`命令がDockerfile内に複数ある場合、最後の`CMD`命令だけが有効になります。また、`docker run`コマンドでコマンドを指定した場合、そのコマンドが`CMD`命令の内容を上書きします。
+
+### sh -c は必要ですか？
+Dockerfileの`CMD`命令や`ENTRYPOINT`命令では、シェル形式とexec形式の2つの形式が使用できます。
+
+- シェル形式： `CMD command param1 param2`。この形式では、指定したコマンドは`/bin/sh -c`の下で実行され、環境変数の展開など、シェルの機能が利用できます。
+
+- exec形式： `CMD ["executable","param1","param2"]`。この形式では、コマンドはシェルを経由せずに直接実行されます。
+
+環境変数を含むコマンドをexec形式で実行する場合、環境変数の展開を行うために`sh -c`を使う必要があります。例えば、
+
+```Dockerfile
+CMD ["sh", "-c", "echo My database is $database"]
+```
+
+これは、シェル（`sh`）を起動し、そのシェルで`echo My database is $database`というコマンドを実行します。ここで`$database`は環境変数で、シェルの機能を通じて展開されます。
+
+これに対して、次のように`sh -c`を省略した場合：
+
+```Dockerfile
+CMD ["echo", "My database is $database"]
+```
+
+これはシェルを介さずに`echo`コマンドを直接実行しますが、`$database`という環境変数は展開されません。したがって、実際には`My database is $database`という文字列がそのまま出力されます。
+
+したがって、環境変数の展開を行いたい場合は、`sh -c`を使ってシェルを介してコマンドを実行する必要があります。
+
+### -c の意味
+`-c`オプションは、Unix系システムのシェル（例えば`sh`や`bash`など）で使用されるオプションです。`-c`オプションの後に指定した文字列をシェルコマンドとして実行します。
+
+たとえば、`sh -c "echo hello"`というコマンドは、`sh`シェルを起動し、そのシェルで`echo hello`というコマンドを実行します。
+
+Dockerfileの`CMD`命令や`ENTRYPOINT`命令でexec形式（`CMD ["executable","param1","param2"]`）を使用して環境変数を含むコマンドを実行する場合、環境変数の展開を行うために`sh -c`を使うことがあります。例えば、
+
+```Dockerfile
+CMD ["sh", "-c", "echo My database is $database"]
+```
+
+このコマンドは、`sh`シェルを起動し、そのシェルで`echo My database is $database`というコマンドを実行します。ここで`$database`は環境変数で、シェルの機能を通じて展開されます。
+
+### なんの略？
+`-c`オプションの`c`は "command" を意味します。つまり、`-c`は "command" の略です。
+
+Unix系のシェルで、`-c`オプションを付けてシェルを起動すると、その後に続く文字列をシェルコマンドとして実行します。したがって、`-c`は "command" を意味し、その後に続く文字列が実行されるコマンドを示しています。
+
+例えば、`sh -c "echo hello"`というコマンドは、`sh`シェルを起動し、そのシェルで`echo hello`というコマンドを実行します。ここで、`-c`の後に続く`"echo hello"`が実行されるコマンドを示しています。
