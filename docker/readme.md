@@ -310,3 +310,14 @@ Docker公式ではボリュームを推奨している。
 実行はコンテナで行いたいが、開発はvscodeなどでローカル開発したい場合はバインドマウントを利用する。
 
 ボリュームはデータベースなどで利用される。
+
+## コンテナと接続する
+`docker container run -p [ホスト]:[コンテナ] [イメージ]`
+たとえば
+`docker container run -p 3000:80 --rm nginx`
+PORTSを見ればポートの割り当てが確認できる
+`docker container ls`
+### dockerネットワークとは？
+コンテナ同士を通信可能にしたり、不要なコンテナの通信を防ぐ
+`docker network ls`
+デフォルトは`bridge`になる
