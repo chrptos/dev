@@ -57,8 +57,23 @@ if (bronse) {
 ## 依存性逆転の原則
 - 上位モジュールは下位モジュールに依存してはならない。どちらもモジュールの「抽象」に依存すべき
 - 「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである
-- UserController→IUserService←UserService
+- UserController→IUserService←UserServiceのようなケースが該当する。
+- UserServiceではUserRepository以外を利用できない、テストもしずらい
 - DIを利用する
+- 依存性逆転の原則を守ることでモジュール同士が疎結合となるので、UserRepositoryをTestUserRepositoryに変更しても大丈夫になる
+```
+// UserServiceがUserRdbRepository()に依存している例
+class UserService {
+    private userRdbRepository = new UserRdbRepository();
+}
+// 疎結合な例
+class UserService {
+    private readonly userRepository: IUserRepository;
+    constructor(userRepository: IUserRepository) {
+        this.userRepository = userRepository;
+    }
+}
+```
 ### DIのデメリット
 - 外部から渡すためのインスタンス生成が複雑化することがある
 - コンテナ生成が外部ライブラリ依存になる言語がある
