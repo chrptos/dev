@@ -85,3 +85,4 @@ class UserService {
 const sample = new Sample(new Hoge(new Fuga(), new Piyo()))
 ```
 DIコンテナにクラスと生成方法を登録しておき、DIコンテナ軽油でインスタンス化を行うことで、事前に登録しておいた状態でインスタンスを取得可能
+## デザインパターン
