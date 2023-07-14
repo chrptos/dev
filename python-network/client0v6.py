@@ -5,7 +5,7 @@ PORT = 50000
 BUFSIZE = 4049
 
 # IPv4とTCPを利用
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 
 client.connect((HOST, PORT))
 
