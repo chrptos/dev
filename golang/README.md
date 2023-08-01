@@ -1098,3 +1098,108 @@ https://zenn.dev/ryo_yamaoka/articles/595cf9e69229f9
 
 ref: https://zenn.dev/ryo_yamaoka/articles/595cf9e69229f9
 
+## MarshallingとUnmarshallingとは
+Marshalling（マーシャリング）とUnmarshalling（アンマーシャリング）は、データの表現形式の変換に関連するプロセスで、特にプログラミングのコンテキストでよく使用されます。
+
+### Marshalling（マーシャリング）
+
+マーシャリングとは、メモリ内のオブジェクトやデータ構造を、ネットワーク通信やファイルシステムへの保存などに適した形式（通常はバイトストリームまたは文字列）に変換するプロセスです。この変換によって、データは他のシステムやプログラムと共有したり、後で再利用したりできます。
+
+例：Go言語でのJSONへのエンコード、Javaの場合はシリアライズなど。
+
+### Unmarshalling（アンマーシャリング）
+
+アンマーシャリングは、マーシャリングの逆のプロセスで、バイトストリームまたは文字列などの外部形式から、元のオブジェクトやデータ構造に変換する作業です。この変換を通じて、保存されたデータや他のシステムから送信されたデータをプログラム内で操作できる形式に戻すことができます。
+
+例：Go言語でのJSONからのデコード、Javaの場合はデシリアライズなど。
+
+### まとめ
+
+マーシャリングとアンマーシャリングは、オブジェクトとバイトストリームやテキスト表現との間の変換を扱います。この変換により、オブジェクトの永続化やネットワーク経由での送信などが可能になります。多くのプログラミング言語とライブラリでは、このプロセスを簡単に行うための関数やメソッドが提供されています。
+
+## GoでのMarshallとUnmarshall
+Go言語でJSONのマーシャリング（エンコード）とアンマーシャリング（デコード）を行う例を以下に示します。
+
+### マーシャリング（エンコード）
+
+Goの構造体をJSON文字列に変換する例です。
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+type Person struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+func main() {
+	p := Person{Name: "John", Age: 30}
+
+	// マーシャリング
+	jsonData, err := json.Marshal(p)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println(string(jsonData)) // {"name":"John","age":30}
+}
+```
+
+### アンマーシャリング（デコード）
+
+JSON文字列をGoの構造体に変換する例です。
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+type Person struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+func main() {
+	jsonData := `{"name":"John","age":30}`
+
+	var p Person
+
+	// アンマーシャリング
+	err := json.Unmarshal([]byte(jsonData), &p)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Name:", p.Name) // Name: John
+	fmt.Println("Age:", p.Age)  // Age: 30
+}
+```
+
+この例では、`json.Marshal`と`json.Unmarshal`関数を使用しています。これらの関数は、Goの標準ライブラリの一部で、JSONとGoのデータ構造との間で変換を行うのに役立ちます。
+
+## MarshalとUnmarshalの語源
+"Marshal"と"Unmarshal"の語源は、主に軍事と法の世界から来ています。
+
+### Marshal
+
+"Marshal"の語源は、古フランス語の"mareschal"や古高ドイツ語の"marahscal"に由来し、これらは「馬の管理人」や「厩舎長」を意味します。この言葉は、次第に高い軍事階級や警察官に関連する肩書きとなりました。
+
+"Marshal"という言葉がプログラミングのコンテキストで使われるようになったのは、この歴史的な背景から、ある状態から別の状態への整理と調整、組織化の概念が発展したからです。データを一定のフォーマットに変換するプロセスにこの言葉が使われるのは、データを整理し、送信や保存に適した形式にまとめるという意味合いからです。
+
+### Unmarshal
+
+"Unmarshal"は、"Marshal"の逆のプロセスを指します。"Un-"接頭辞は、多くの英語の単語で「反対の」または「逆の」を意味するので、"Unmarshal"は「マーシャリングの解除」または「整理されたデータの解体」を意味します。
+
+### まとめ
+
+"Marshal"と"Unmarshal"の語源は、組織と整理の概念に根ざしており、これがプログラミングの世界でデータの整理と変換のプロセスに適用されています。
