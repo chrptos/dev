@@ -1,0 +1,21 @@
+@startuml sample
+
+!define TRANSACTION CAE7F2
+
+entity users as "users\nユーザー" <<T,TRANSACTION>> {
+  + id INT(10) [PK]
+  --
+  - xxx_01 BIGINT(30) [あああ]
+  # xxx_02 TINYINT(1) [いいい]
+  * xxx_03 FLOAT
+  ~ xxx_04 DOUBLE
+  xxx_05 VARCHAR(255)
+  xxx_06 TEXT
+  xxx_07 DATE
+  xxx_08 DATETIME
+  xxx_09 TIMESTAMP
+  xxx_10 GEOMETRY
+  xxx_11 JSON
+}
+
+@enduml
