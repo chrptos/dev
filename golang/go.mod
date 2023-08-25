@@ -1,3 +1,3 @@
-module github.com/chrptos/sample
+module github.com/chrptos/myapp
 
 go 1.18
