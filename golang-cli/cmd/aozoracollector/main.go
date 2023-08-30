@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 type Entry struct {
@@ -14,8 +16,13 @@ type Entry struct {
 	ZipURL string
 }
 
-func funcfindEntries(siteURL string) ([]Entry, error) {
-	//処理
+func findEntries(siteURL string) ([]Entry, error) {
+	doc, err := goquery.NewDocument(siteURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func main() {
