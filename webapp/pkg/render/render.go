@@ -6,7 +6,6 @@ import (
 	"github.com/chrptos/dev/webapp/pkg/handlers"
 )
 
-// TODO: refactor
 func Home(w http.ResponseWriter, r *http.Request) {
 	handlers.RenderTemplate(w, "home.page.tmpl")
 }
