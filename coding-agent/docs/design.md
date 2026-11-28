@@ -106,7 +106,7 @@ flowchart TB
     proxy --> sm
     proxy -->|認証を付けて転送| vertex
     proxy -->|認証を付けて転送| github[GitHub]
-    proxy -->|読み取りのみ| registry[公開レジストリ]
+    proxy -->|許可したホストのみ| registry[公開レジストリ]
     proxy --> fs
     bot -->|結果を通知| slack
     proxy --> gcs
@@ -152,7 +152,17 @@ Slack の Bot トークンを持つのはこのサービスだけです。
 - PR のタイトルと本文を egress プロキシに報告して終了する。PR の作成はプロキシが行う。
 - 実行時間の上限は60分とする。
 
-**ハーネス**：MVP では Claude Code をヘッドレスモードで動かすことを第一候補とします。Vertex AI の利用と、接続先を egress プロキシに差し替える設定が使えるかを最初に検証します（[未決事項](#12-未決事項) を参照）。代わりの候補は Claude Agent SDK で書く小さなランナーです。
+**ハーネス**：Claude Code をヘッドレスモード（`claude -p`）で動かします。次の設定で、Vertex AI への通信を egress プロキシに向け、認証をプロキシに任せられることを検証しました（[付録 A](#付録-a-段階1の検証結果)）。
+
+| 環境変数 | 値 |
+|---|---|
+| `CLAUDE_CODE_USE_VERTEX` | `1` |
+| `CLAUDE_CODE_SKIP_VERTEX_AUTH` | `1`（Google の認証をしない。認証はプロキシが付ける） |
+| `ANTHROPIC_VERTEX_BASE_URL` | `http://<proxy>:8080/t/<task-token>/vertex` |
+| `ANTHROPIC_VERTEX_PROJECT_ID` | 対象の GCP プロジェクト |
+| `CLOUD_ML_REGION` | `global` |
+| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | `1` |
+| `HTTPS_PROXY` | `http://task:<task-token>@<proxy>:8080` |
 
 **サービスアカウント**：サンドボックス専用のサービスアカウントを作り、**IAM ロールを1つも付けません**。Cloud Run の中からはメタデータサーバー経由でサービスアカウントのトークンを取得できてしまうため、権限を持たないアカウントにしておく必要があります。デフォルトのサービスアカウントは使いません。
 
@@ -171,7 +181,7 @@ Slack の Bot トークンを持つのはこのサービスだけです。
 | GitHub（git の clone、fetch、push） | リバースプロキシ | GitHub App のインストールトークン | タスクの対象リポジトリだけ |
 | PR の作成 | プロキシ独自の API | GitHub App のインストールトークン | タスクの対象リポジトリに1件だけ |
 | 進捗と結果の報告 | プロキシ独自の API | なし | Firestore のそのタスクだけに書く |
-| 公開レジストリ（npm、PyPI など） | フォワードプロキシ（CONNECT） | なし | 許可リストにあるドメインだけ |
+| 公開レジストリ（npm、PyPI など） | フォワードプロキシ（CONNECT） | なし | 許可リストにあるホストの 443 番ポートだけ。中身は TLS なのでメソッドやパスは制限できない |
 | それ以外 | — | — | すべて拒否 |
 
 **タスクトークン**：サンドボックスがプロキシを呼ぶときは、受付 Bot が発行したタスク専用のトークンを付けます。プロキシはこのトークンから、どのタスクの、どのリポジトリへの通信かを判断します。トークンはサンドボックスの中にありますが、次の理由で漏れても被害は小さく抑えられます。
@@ -211,7 +221,8 @@ Slack の Bot トークンを持つのはこのサービスだけです。
 ### 6.7 モデルの設定
 
 - Vertex AI 経由で Claude を使う。請求を GCP にまとめられ、認証は egress プロキシのサービスアカウントで済む。
-- メインのモデルとサブエージェントのモデルを分け、サブエージェントには安いモデルを既定にする。
+- **global エンドポイントを使う。** 2026年11月時点で、日本のリージョン（asia-northeast1 など）で Claude を提供しているという記載は確認できなかった。新しいモデル（5 系）は global と、us・eu のマルチリージョンだけで提供されている。社内のコードを扱う MVP では処理する場所の要件がないため、空きの多い global を使う。処理する場所の要件があるデータを扱うときは、us か eu のマルチリージョンを検討する。
+- メインのモデルは `claude-sonnet-5-5`、サブエージェントのモデルは `claude-haiku-5-5` を既定にする（`ANTHROPIC_MODEL`、`ANTHROPIC_DEFAULT_HAIKU_MODEL`、`CLAUDE_CODE_SUBAGENT_MODEL`）。egress プロキシでも、許可したモデル以外への通信を拒否する。
 - reasoning effort は中程度を既定にする。
 - タスクごとにターン数とトークン数の上限を設け、超えたら止めてスレッドに報告する。
 
@@ -267,7 +278,7 @@ sequenceDiagram
 
 ### 残るリスク
 
-- **許可したレジストリ経由の持ち出し**：npm などへの通信は許可しているので、理論上はそこを経由してデータを持ち出せます。MVP では読み取り（GET）だけを許可し、publish などの書き込みはプロキシで拒否します。
+- **許可したレジストリ経由の持ち出し**：npm などへの通信は CONNECT のトンネルで許可しています。トンネルの中は TLS なので、プロキシでは GET と publish を区別できず、URL に載せたデータの持ち出しも防げません。publish にはレジストリの認証情報が必要で、サンドボックスはそれを持たないため、MVP ではこのリスクを受け入れます。次の段階で、Artifact Registry のリモートリポジトリ（公開レジストリの読み取り専用のキャッシュ）に切り替え、公開レジストリへの直接の通信をなくします。
 - **PR の本文やコードを経由した持ち出し**：エージェントが作る PR に機密情報を書き込むおそれがあります。対象は社内の private リポジトリに限り、レビューで確認します。
 - **依頼者の確認**：Slack のワークスペースにいる人なら誰でも依頼できます。MVP では特定のチャンネルとメンバーに限ります。
 
@@ -303,14 +314,15 @@ sequenceDiagram
 
 ## 12. 未決事項
 
-| 項目 | 確認すること |
-|---|---|
-| ハーネス | Claude Code のヘッドレスモードで、Vertex AI の接続先を egress プロキシに差し替え、認証をプロキシに任せられるか |
-| モデルのリージョン | 使いたい Claude のモデルが、使いたいリージョン（東京など）の Vertex AI で提供されているか |
-| git の通信 | git の `url.<base>.insteadOf` で、clone と push をプロキシ経由にできるか。プロキシが git の通信を正しく中継できるか |
-| Cloud Run Jobs | タスクの起動時間、イメージの大きさによる影響、1回の実行時間の上限 |
-| 対象リポジトリ | 最初に許可するリポジトリと、テストの実行方法 |
-| Slack | 依頼を受け付けるチャンネルとメンバー |
+| 項目 | 確認すること | 状態 |
+|---|---|---|
+| ハーネス | Claude Code のヘッドレスモードで、Vertex AI の接続先を egress プロキシに差し替え、認証をプロキシに任せられるか | 確認済み（付録 A） |
+| モデルのリージョン | 使いたい Claude のモデルが、使いたいリージョン（東京など）の Vertex AI で提供されているか | 確認済み。日本のリージョンでの提供は確認できず、global を使う（6.7） |
+| モデルの有効化とクォータ | プロジェクトで Claude のモデルを有効にし、実際に応答が返るか | **未完了**。Model Garden での有効化と利用規約への同意が必要 |
+| git の通信 | git の `url.<base>.insteadOf` で、clone と push をプロキシ経由にできるか | clone と fetch は確認済み。push は GitHub App の作成後に確認する |
+| Cloud Run Jobs | タスクの起動時間、イメージの大きさによる影響、1回の実行時間の上限 | 未確認 |
+| 対象リポジトリ | 最初に許可するリポジトリと、テストの実行方法 | 未定 |
+| Slack | 依頼を受け付けるチャンネルとメンバー | 未定 |
 
 ## 13. 進め方
 
@@ -332,6 +344,51 @@ sequenceDiagram
 | 第2段階 | Jira や Sentry からの起動、同じスレッドでの追加の依頼、コストのダッシュボード、セッションの自動分析 |
 | 第3段階 | GKE Agent Sandbox への移行、頭脳と手の分離、耐久実行、個人の権限で動くエージェント |
 | 第4段階 | 社内データの集約と MCP ゲートウェイ、自動の改善ループ、複数モデルの振り分け |
+
+## 付録 A. 段階1の検証結果
+
+2026-11-27 に手元の Mac で検証しました。egress プロキシの試作は [../egress-proxy](../egress-proxy) にあります。
+
+### Claude Code → egress プロキシ → Vertex AI
+
+- Claude Code 2.1.236 を、ユーザーの設定から切り離した設定ディレクトリで、[6.2](#62-サンドボックスcloud-run-jobs) の環境変数を付けてヘッドレスモードで実行した。
+- Claude Code はモデルの呼び出しを `ANTHROPIC_VERTEX_BASE_URL` に送り、プロキシが Google のアクセストークンを付けて global エンドポイントの `streamRawPredict` に転送した。
+- Vertex AI からはクォータ超過（429）が返った。認証が通らなければ 401 か 403 になるので、**プロキシで付けた認証は受け入れられている**。429 は、このプロジェクトで Claude のモデルがまだ有効になっていないためと考えられる（Model Garden の一覧には表示され、利用申請の項目がある）。
+- `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` と `HTTPS_PROXY` を設定した状態で、Claude Code からモデルの呼び出し以外の通信（CONNECT）は発生しなかった。
+
+### git → egress プロキシ → GitHub
+
+- `url.<base>.insteadOf` で、公開リポジトリの clone と `ls-remote` がプロキシ経由で成功した。
+- タスクに許可していないリポジトリの clone は、プロキシが 403 で拒否した。
+- 認証情報（GitHub App のトークン）を付ける処理は単体テストで確認した。実際の push は GitHub App を作ってから確認する。
+
+### 公開レジストリへの CONNECT
+
+- 許可したホスト（registry.npmjs.org）への通信は成功し、許可していないホスト（example.com）への通信は拒否された。
+
+### 確認できたこと以外の発見
+
+- Vertex AI の global エンドポイントでは、v1 の `rawPredict` が 404（HTML のエラーページ）になり、`streamRawPredict` と v1beta1 の `rawPredict` は API に届いた。Claude Code は `streamRawPredict` を使うので MVP には影響しない。
+- CONNECT ではトンネルの中身を見られないため、レジストリへの通信を読み取りだけに限ることはできない（[8. セキュリティ](#8-セキュリティ) の残るリスクに反映した）。
+
+### Pi → egress プロキシ → Vertex AI（2026-11-28 追加）
+
+ハーネスの候補として、OSS（MIT）の Pi（`@earendil-works/pi-coding-agent` 1.6.1）を同じ条件で試した。
+
+- Pi は Vertex AI の Claude に直接は対応していない。そこで、Pi の `models.json` で接続先（`baseUrl`）をプロキシに向け、プロキシに次の2つの経路を足した。
+  - Anthropic Messages API の形（`/v1/messages`）を受けて、Vertex AI の Claude の形に付け替える経路。
+  - Gemini API の形を受けて、Vertex AI の Gemini に付け替える経路。
+- Pi が送る鍵（`x-api-key`、`x-goog-api-key`）はダミーで、プロキシが捨てて自分のトークンを付ける。**サンドボックスに鍵を置かない原則は保てる。**
+- Gemini（`gemini-2.5-flash`）で、プロキシ経由で clone したリポジトリに「README を要約したファイルを作る」タスクを実行し、成功した。
+  - モデルの呼び出しは6回。プロキシのログにトークン数（キャッシュを含む）が出た。
+- Claude（`claude-haiku-4-5`）では、Claude Code と同じくクォータ超過（429）まで届いた。
+- `PI_OFFLINE=1` と `HTTPS_PROXY` を設定した状態で、モデルの呼び出しと git 以外の通信は発生しなかった。
+
+### 残っている作業
+
+1. プロジェクトで Claude のモデル（`claude-sonnet-5-5`、`claude-haiku-5-5`）を Model Garden で有効にする。利用規約への同意が必要なので、プロジェクトの管理者が行う。
+2. 有効にしたあと、同じ手順で実際に応答が返ることと、プロキシのログにトークン数が出ることを確かめる。
+3. GitHub App を作り、push と PR の作成を確かめる。
 
 ## 14. 参考資料
 
