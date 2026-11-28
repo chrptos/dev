@@ -1,0 +1,76 @@
+[project]
+name = "shop"
+version = "0.1.0"
+description = "検証手法（テスト）を一通り試すための練習用プロジェクト"
+readme = "README.md"
+authors = [
+    { name = "chrptos", email = "chrptos@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.165.0",
+    "pydantic-settings>=2.16.3",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.4",
+    "httpx>=0.29.0",
+    "hypothesis>=6.170.21",
+    "mutmut>=3.8.1",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-benchmark>=5.3.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.6",
+    "schemathesis>=4.34.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib", "--benchmark-skip"]
+filterwarnings = ["ignore:Using .httpx. with .starlette.testclient. is deprecated"]
+
+[tool.coverage.run]
+source = ["shop"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+# 日本語の全角文字を許可する
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"src/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["schemathesis.*"]
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]
+
+[tool.mutmut]
+# パッケージ全体をコピーし、変異させるのは計算ロジックだけにする
+source_paths = ["src/shop"]
+only_mutate = ["src/shop/pricing.py"]
+pytest_add_cli_args_test_selection = ["tests/unit", "tests/property", "tests/regression"]

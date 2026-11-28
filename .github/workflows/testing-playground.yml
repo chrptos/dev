@@ -1,0 +1,58 @@
+name: testing-playground
+
+on:
+  push:
+    branches: [main]
+    paths: ["testing-playground/**", ".github/workflows/testing-playground.yml"]
+  pull_request:
+    paths: ["testing-playground/**", ".github/workflows/testing-playground.yml"]
+
+defaults:
+  run:
+    working-directory: testing-playground
+
+jobs:
+  static:
+    name: Lint / Type check / Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: make lint
+      - run: make typecheck
+      - run: make security
+
+  test:
+    name: Tests + Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: make coverage
+
+  smoke:
+    name: Smoke test against running server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: |
+          uv run uvicorn shop.api:app --port 8000 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/health && break; sleep 1; done
+          SHOP_BASE_URL=http://127.0.0.1:8000 uv run pytest tests/smoke
+
+  mutation:
+    name: Mutation test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run mutmut run
+      - name: Fail if any mutant survived
+        run: |
+          uv run mutmut results
+          test -z "$(uv run mutmut results | grep -v ': killed')"
