@@ -44,7 +44,11 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
       - run: |
-          uv run uvicorn shop.api:app --port 8000 &
+          # uv run で起動したままにすると、uv のキャッシュのロックが残り、
+          # setup-uv の後片付けがタイムアウトする。venv の uvicorn を直接起動し、最後に止める
+          .venv/bin/uvicorn shop.api:app --port 8000 &
+          server=$!
+          trap 'kill $server' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/health && break; sleep 1; done
           SHOP_BASE_URL=http://127.0.0.1:8000 uv run pytest tests/smoke
 
