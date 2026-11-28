@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "job-posting-agent",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--directory", "job-posting-agent", "uvicorn", "--factory", "job_posting_agent.server:create_app", "--port", "8765"],
+      "port": 8765
+    }
+  ]
+}
