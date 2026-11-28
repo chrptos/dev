@@ -1,0 +1,89 @@
+[project]
+name = "job-posting-agent"
+version = "0.1.0"
+description = "求人票をまとめ、利用者ごとの観点でネクストアクションを提案するエージェント（バックエンド）"
+requires-python = ">=3.12"
+dependencies = [
+    "google-adk[db]>=2.15.1",
+    "aiosqlite>=0.22.1",
+    "asyncpg>=0.30.0",
+    "cloud-sql-python-connector[asyncpg]>=1.18.0",
+    "fastapi>=0.165.0",
+    "httpx>=0.29.0",
+    "pydantic-settings>=2.16.3",
+    "python-dotenv>=1.1.0",
+    "python-multipart>=0.0.20",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "import-linter>=2.17",
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+# 日本語の全角文字を許可する
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S104", "S105", "S106"]
+
+# 層の向き（docs/backend-architecture.md）。tests/test_architecture.py から実行する
+[tool.importlinter]
+root_package = "job_posting_agent"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "層の向き：管理スクリプト → 組み立て → 入口とインフラ → アプリケーション → ドメイン"
+type = "layers"
+containers = ["job_posting_agent"]
+layers = [
+    "seed",
+    "main",
+    "presentation | infrastructure",
+    "application",
+    "domain",
+]
+exhaustive = true
+exhaustive_ignores = ["config"]
+
+[[tool.importlinter.contracts]]
+name = "設定を読むのは組み立てだけ"
+type = "forbidden"
+source_modules = [
+    "job_posting_agent.domain",
+    "job_posting_agent.application",
+    "job_posting_agent.presentation",
+    "job_posting_agent.infrastructure",
+]
+forbidden_modules = ["job_posting_agent.config"]
+
+[[tool.importlinter.contracts]]
+name = "ドメインとアプリケーションは外の技術を知らない"
+type = "forbidden"
+source_modules = ["job_posting_agent.domain", "job_posting_agent.application"]
+forbidden_modules = ["fastapi", "starlette", "google", "sqlalchemy", "httpx"]
+
+[[tool.importlinter.contracts]]
+name = "SQL と外部への HTTP はインフラだけ"
+type = "forbidden"
+source_modules = ["job_posting_agent.presentation"]
+forbidden_modules = ["sqlalchemy", "httpx"]
+# ADK の Runner とセッションを presentation から使わないことは、
+# import-linter では書けない（外部パッケージの一部は指定できない）ので
+# tests/test_architecture.py で確かめる

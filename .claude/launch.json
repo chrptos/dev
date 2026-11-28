@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "job-posting-agent-backend",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--directory", "job-posting-agent/backend", "uvicorn", "--factory", "job_posting_agent.main:create_app", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "job-posting-agent-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "job-posting-agent/frontend", "run", "dev", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
+    }
+  ]
+}
