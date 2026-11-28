@@ -3,9 +3,6 @@ name = "shop"
 version = "0.1.0"
 description = "検証手法（テスト）を一通り試すための練習用プロジェクト"
 readme = "README.md"
-authors = [
-    { name = "chrptos", email = "chrptos@gmail.com" }
-]
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.165.0",
