@@ -22,6 +22,7 @@ Vertex AI への応答からトークン数（入力、出力、キャッシュ�
 | `VERTEX_PROJECT` | 転送を許可する GCP プロジェクト | 必須 |
 | `TASKS_FILE` | タスクトークンとタスクの対応を書いた JSON | 必須 |
 | `ALLOWED_MODELS` | 許可するモデル（カンマ区切り、`@` 以降のバージョンは無視） | `claude-sonnet-5-5,claude-haiku-5-5` |
+| `ALLOWED_LOCATIONS` | 許可する Vertex AI のロケーション（カンマ区切り）。転送先のホスト名になるので決まった値だけを通す | `global,us,eu` |
 | `REGISTRY_HOSTS` | CONNECT を許可するホスト（カンマ区切り） | npm、PyPI、Go のプロキシ |
 | `GITHUB_TOKEN` | GitHub に付けるトークン | なし（付けない） |
 | `LISTEN_ADDR` | 待ち受けるアドレス | `127.0.0.1:8080` |

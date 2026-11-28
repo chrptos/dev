@@ -58,8 +58,11 @@ type Config struct {
 	Listen        string
 	VertexProject string
 	AllowedModels map[string]bool
-	RegistryHosts map[string]bool
-	GitHubToken   string
+	// AllowedLocations は Vertex AI のロケーションの許可リストです。
+	// 転送先のホスト名はロケーションから作るので、決まった値だけを通します。
+	AllowedLocations map[string]bool
+	RegistryHosts    map[string]bool
+	GitHubToken      string
 }
 
 type Proxy struct {
@@ -74,9 +77,10 @@ func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	cfg := Config{
-		Listen:        envOr("LISTEN_ADDR", "127.0.0.1:8080"),
-		VertexProject: os.Getenv("VERTEX_PROJECT"),
-		AllowedModels: csvSet(envOr("ALLOWED_MODELS", "claude-sonnet-5-5,claude-haiku-5-5")),
+		Listen:           envOr("LISTEN_ADDR", "127.0.0.1:8080"),
+		VertexProject:    os.Getenv("VERTEX_PROJECT"),
+		AllowedModels:    csvSet(envOr("ALLOWED_MODELS", "claude-sonnet-5-5,claude-haiku-5-5")),
+		AllowedLocations: csvSet(envOr("ALLOWED_LOCATIONS", "global,us,eu")),
 		RegistryHosts: csvSet(envOr("REGISTRY_HOSTS",
 			"registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,sum.golang.org")),
 		GitHubToken: os.Getenv("GITHUB_TOKEN"),

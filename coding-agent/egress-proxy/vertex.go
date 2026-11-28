@@ -62,6 +62,12 @@ func (p *Proxy) handleVertex(w http.ResponseWriter, r *http.Request, task Task, 
 		p.deny(w, r, task.ID, "vertex path not allowed", http.StatusForbidden)
 		return
 	}
+	// ロケーションは転送先のホスト名になり、リクエストにはプロキシの GCP トークンが付くので、
+	// 許可リストにある値だけを通します。
+	if !p.cfg.AllowedLocations[t.Location] {
+		p.deny(w, r, task.ID, "vertex location not allowed", http.StatusForbidden)
+		return
+	}
 	if t.Project != p.cfg.VertexProject {
 		p.deny(w, r, task.ID, "vertex project not allowed", http.StatusForbidden)
 		return

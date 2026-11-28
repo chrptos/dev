@@ -36,10 +36,11 @@ func (u *upstreamTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 func newTestProxy(up *upstreamTransport) *Proxy {
 	return &Proxy{
 		cfg: Config{
-			VertexProject: "proj",
-			AllowedModels: csvSet("claude-haiku-4-5"),
-			RegistryHosts: csvSet("registry.npmjs.org"),
-			GitHubToken:   "gh-secret",
+			VertexProject:    "proj",
+			AllowedModels:    csvSet("claude-haiku-4-5"),
+			AllowedLocations: csvSet("global,us"),
+			RegistryHosts:    csvSet("registry.npmjs.org"),
+			GitHubToken:      "gh-secret",
 		},
 		tasks:       fileTaskStore{"tok": {ID: "task-1", Repos: []string{"acme/app"}}},
 		tokenSource: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "gcp-secret"}),
@@ -100,6 +101,10 @@ func TestVertexDenies(t *testing.T) {
 		{"other project", "/t/tok/vertex/v1/projects/other/locations/global/publishers/anthropic/models/claude-haiku-4-5:rawPredict", http.StatusForbidden},
 		{"model not allowed", "/t/tok/vertex/v1/projects/proj/locations/global/publishers/anthropic/models/claude-opus-5-5:rawPredict", http.StatusForbidden},
 		{"other publisher", "/t/tok/vertex/v1/projects/proj/locations/global/publishers/google/models/gemini:generateContent", http.StatusForbidden},
+		{"location not allowed", "/t/tok/vertex/v1/projects/proj/locations/asia-northeast1/publishers/anthropic/models/claude-haiku-4-5:rawPredict", http.StatusForbidden},
+		// ロケーションは転送先のホスト名になるので、ホスト名を変える値は通さない
+		{"location host injection", "/t/tok/vertex/v1/projects/proj/locations/evil.example%23/publishers/anthropic/models/claude-haiku-4-5:rawPredict", http.StatusForbidden},
+		{"location with port", "/t/tok/vertex/v1/projects/proj/locations/evil.example:443/publishers/anthropic/models/claude-haiku-4-5:rawPredict", http.StatusForbidden},
 		{"unknown route", "/t/tok/other", http.StatusForbidden},
 	}
 	for _, c := range cases {
