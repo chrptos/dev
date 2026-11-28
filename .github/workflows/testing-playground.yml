@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ["testing-playground/**", ".github/workflows/testing-playground.yml"]
 
+# CI はコードを読むだけなので、GITHUB_TOKEN の権限を読み取りに絞る
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: testing-playground
