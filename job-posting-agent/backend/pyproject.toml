@@ -22,6 +22,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.17",
     "pytest>=9.2.0",
     "ruff>=0.17.6",
 ]
@@ -41,3 +42,48 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S104", "S105", "S106"]
+
+# 層の向き（docs/backend-architecture.md）。tests/test_architecture.py から実行する
+[tool.importlinter]
+root_package = "job_posting_agent"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "層の向き：管理スクリプト → 組み立て → 入口とインフラ → アプリケーション → ドメイン"
+type = "layers"
+containers = ["job_posting_agent"]
+layers = [
+    "seed",
+    "main",
+    "presentation | infrastructure",
+    "application",
+    "domain",
+]
+exhaustive = true
+exhaustive_ignores = ["config"]
+
+[[tool.importlinter.contracts]]
+name = "設定を読むのは組み立てだけ"
+type = "forbidden"
+source_modules = [
+    "job_posting_agent.domain",
+    "job_posting_agent.application",
+    "job_posting_agent.presentation",
+    "job_posting_agent.infrastructure",
+]
+forbidden_modules = ["job_posting_agent.config"]
+
+[[tool.importlinter.contracts]]
+name = "ドメインとアプリケーションは外の技術を知らない"
+type = "forbidden"
+source_modules = ["job_posting_agent.domain", "job_posting_agent.application"]
+forbidden_modules = ["fastapi", "starlette", "google", "sqlalchemy", "httpx"]
+
+[[tool.importlinter.contracts]]
+name = "SQL と外部への HTTP はインフラだけ"
+type = "forbidden"
+source_modules = ["job_posting_agent.presentation"]
+forbidden_modules = ["sqlalchemy", "httpx"]
+# ADK の Runner とセッションを presentation から使わないことは、
+# import-linter では書けない（外部パッケージの一部は指定できない）ので
+# tests/test_architecture.py で確かめる

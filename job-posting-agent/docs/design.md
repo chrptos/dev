@@ -26,7 +26,7 @@ IAP（許可したアカウントだけを通す）
    ▼
 Cloud Run（1つのサービス）
  ├ フロントエンド（frontend/ をビルドした静的ファイル）
- └ バックエンド（backend/、FastAPI）
+ └ バックエンド（backend/、FastAPI。層の構成は backend-architecture.md）
      ├ IAP の署名付きヘッダー（JWT）を検証し、メールアドレスを user_id にする
      └ ADK の Runner でエージェントを呼ぶ
          ├ 求人の読み込みツール（DB／URL）。PDF は Gemini が直接読む
@@ -99,7 +99,7 @@ SSE のイベントは `delta`（返答の一部）、`tool`（ツールの呼�
 
 | 項目 | 決めたこと | 変えるとき |
 |---|---|---|
-| 求人票のデータベース | 同じ Cloud SQL の `job_postings` テーブルを読む | 別のDBや外部サービスなら、`repository.get_job_posting` を差し替える |
+| 求人票のデータベース | 同じ Cloud SQL の `job_postings` テーブルを読む | 別のDBや外部サービスなら、`JobPostingSource` の実装（`infrastructure/repositories.py`）を差し替える |
 | 求人のまとめの共有 | 本人だけが見られる | 共有するなら、`job_summaries` の検索条件から `owner_id` を外す |
 | フロントエンドの配信 | バックエンドと同じ Cloud Run から配信する | 別に配信するなら、IAP と CORS の設定が必要になる |
 | PDF の保存 | 会話のセッションに入れる（Gemini が会話の続きでも読めるように） | セッションが大きくなりすぎたら、ADK の Artifacts（Cloud Storage）に移す |

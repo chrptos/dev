@@ -7,9 +7,9 @@ import pytest
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import types
 from pydantic import Field
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from job_posting_agent import db
+from job_posting_agent.infrastructure.db.engine import create_engine, create_tables, sessionmaker
 
 
 class ScriptedLlm(BaseLlm):
@@ -46,12 +46,15 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
-@pytest.fixture(autouse=True)
-def fresh_db(tmp_path: Path) -> Iterator[None]:
+@pytest.fixture
+def db_url(tmp_path: Path) -> str:
     """テストごとに空の SQLite を使う。"""
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
-    asyncio.run(db.use_engine(engine))
-    yield
+    return f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
+
+
+@pytest.fixture
+def sessions(db_url: str) -> Iterator[async_sessionmaker[AsyncSession]]:
+    engine = create_engine(db_url)
+    asyncio.run(create_tables(engine))
+    yield sessionmaker(engine)
     asyncio.run(engine.dispose())
-    db._engine = None
-    db._sessionmaker = None

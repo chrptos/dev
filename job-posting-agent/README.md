@@ -2,18 +2,18 @@
 
 求人票（DB、PDF、Web URL、貼り付けたテキスト）を受け取り、決まった項目にまとめて、利用者ごとの観点でネクストアクションを提案するエージェントです。ADK で作り、Cloud Run と IAP で、許可した人だけに公開します。
 
-設計は [docs/design.md](docs/design.md) を参照してください。
+設計は [docs/design.md](docs/design.md)、バックエンドのコーディングアーキテクチャは [docs/backend-architecture.md](docs/backend-architecture.md)、決定の記録は [docs/adr/](docs/adr/) を参照してください。
 
 ## 構成
 
 | パス | 内容 |
 |---|---|
-| `backend/` | FastAPI と ADK のエージェント（Python、uv） |
-| `backend/src/job_posting_agent/agent.py` | エージェントの定義と指示文 |
-| `backend/src/job_posting_agent/tools.py` | エージェントのツール（利用者は `tool_context.user_id` から決める） |
-| `backend/src/job_posting_agent/server.py` | API。本番ではビルドした画面も配信する |
-| `backend/src/job_posting_agent/auth.py` | IAP の JWT の検証 |
-| `backend/src/job_posting_agent/url_fetch.py` | URL の安全な取得 |
+| `backend/` | FastAPI と ADK のエージェント（Python、uv）。疎結合なレイヤードアーキテクチャで書く（[docs/backend-architecture.md](docs/backend-architecture.md)） |
+| `backend/src/job_posting_agent/domain/` | 型、エラー、決まりごと |
+| `backend/src/job_posting_agent/application/` | サービスと、外の技術へのインターフェース |
+| `backend/src/job_posting_agent/presentation/` | 入口：HTTP のルート（`http/`）と、AI の指示文とツール（`agent/`） |
+| `backend/src/job_posting_agent/infrastructure/` | DB、ADK の Runner とセッション、URL の安全な取得、IAP の検証 |
+| `backend/src/job_posting_agent/main.py` | 組み立て。本番ではビルドした画面も配信する |
 | `frontend/` | チャット画面（React、TypeScript、Vite） |
 | `frontend/src/hooks/useChat.ts` | 会話の状態と、送信・ストリーミングの処理 |
 | `frontend/src/api/` | API の呼び出しと SSE の読み取り |
@@ -50,7 +50,7 @@ uv run python -m job_posting_agent.seed --sample-job
 ```
 
 ```bash
-uv run uvicorn --factory job_posting_agent.server:create_app --reload --port 8000
+uv run uvicorn --factory job_posting_agent.main:create_app --reload --port 8000
 ```
 
 ### フロントエンド
@@ -71,7 +71,7 @@ npm run dev
 
 ### ADK の開発用画面
 
-ツールの呼び出しを細かく見たいときに使います（利用者は見分けません）。
+ツールの呼び出しを細かく見たいときに使います（利用者は見分けません）。先に上の `seed` を実行して、テーブルを作っておいてください。
 
 ```bash
 cd backend && uv run adk web adk_apps
@@ -79,7 +79,7 @@ cd backend && uv run adk web adk_apps
 
 ## テスト
 
-バックエンドは、Gemini を呼ばずに決まった返事をする偽のモデルで、Runner、セッション保存、ツールを通して確かめます。
+バックエンドは、層ごとにテストを分けています。サービスは偽物のリポジトリで、端から端までは Gemini を呼ばずに決まった返事をする偽のモデルで確かめます。層の向き（import の決まり）も、テストの中で import-linter が確かめます。
 
 ```bash
 cd backend && uv run pytest && uv run ruff check . && uv run ruff format --check .

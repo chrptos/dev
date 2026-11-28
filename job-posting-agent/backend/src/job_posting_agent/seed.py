@@ -1,4 +1,4 @@
-"""チーム共通の観点テンプレートを登録する。
+"""テーブルを作り、チーム共通の観点テンプレートを登録する。
 
 uv run python -m job_posting_agent.seed
 uv run python -m job_posting_agent.seed --sample-job   # ローカル確認用の求人票 J-001 も入れる
@@ -7,8 +7,12 @@ uv run python -m job_posting_agent.seed --sample-job   # ローカル確認用�
 import argparse
 import asyncio
 
-from . import db, repository
-from .db import JobPosting
+from .application.perspective_service import PerspectiveService
+from .config import get_settings
+from .domain.models import JobPosting
+from .infrastructure.db.engine import create_tables, sessionmaker
+from .infrastructure.repositories import SqlJobPostingSource, SqlPerspectiveRepository
+from .main import build_engine
 
 TEAM_TEMPLATES = {
     "標準": (
@@ -33,20 +37,24 @@ SAMPLE_JOB = JobPosting(
         "歓迎：Kubernetes、GCP\n"
         "募集背景：新規事業の立ち上げ\n"
     ),
+    url=None,
 )
 
 
 async def main(sample_job: bool) -> None:
-    for name, content in TEAM_TEMPLATES.items():
-        await repository.save_team_template(name, content)
-    print(f"チームのテンプレートを {len(TEAM_TEMPLATES)} 件登録しました")
-    if sample_job:
-        async with db.session() as s:
-            await s.merge(SAMPLE_JOB)
-            await s.commit()
-        print("サンプルの求人票 J-001 を登録しました")
-    engine = await db.get_engine()
-    await engine.dispose()
+    engine = build_engine(get_settings())
+    try:
+        await create_tables(engine)
+        sessions = sessionmaker(engine)
+        perspectives = PerspectiveService(SqlPerspectiveRepository(sessions))
+        for name, content in TEAM_TEMPLATES.items():
+            await perspectives.save_team_template(name, content)
+        print(f"チームのテンプレートを {len(TEAM_TEMPLATES)} 件登録しました")
+        if sample_job:
+            await SqlJobPostingSource(sessions).put(SAMPLE_JOB)
+            print("サンプルの求人票 J-001 を登録しました")
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":

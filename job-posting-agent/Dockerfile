@@ -24,4 +24,4 @@ COPY --from=frontend /frontend/dist ./frontend-dist
 RUN useradd --create-home app
 USER app
 
-CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn --factory job_posting_agent.server:create_app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn --factory job_posting_agent.main:create_app --host 0.0.0.0 --port ${PORT:-8080}"]
