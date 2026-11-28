@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.venv
+**/.env
+**/*.db
+**/.pytest_cache
+**/.ruff_cache
+**/__pycache__
+backend/tests
+backend/adk_apps
+docs

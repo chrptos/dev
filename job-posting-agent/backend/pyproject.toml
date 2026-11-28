@@ -1,0 +1,43 @@
+[project]
+name = "job-posting-agent"
+version = "0.1.0"
+description = "求人票をまとめ、利用者ごとの観点でネクストアクションを提案するエージェント（バックエンド）"
+requires-python = ">=3.12"
+dependencies = [
+    "google-adk[db]>=2.15.1",
+    "aiosqlite>=0.22.1",
+    "asyncpg>=0.30.0",
+    "cloud-sql-python-connector[asyncpg]>=1.18.0",
+    "fastapi>=0.165.0",
+    "httpx>=0.29.0",
+    "pydantic-settings>=2.16.3",
+    "python-dotenv>=1.1.0",
+    "python-multipart>=0.0.20",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+# 日本語の全角文字を許可する
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S104", "S105", "S106"]
