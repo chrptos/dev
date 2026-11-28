@@ -112,3 +112,55 @@ async def test_fetch_from_db_marks_body_untrusted() -> None:
     assert result["untrusted_content"] == "本文です"
     assert "body" not in result["posting"]
     assert (await tools.fetch_job_posting_from_db("nope"))["status"] == "error"
+
+
+# ---- URL の取得は、利用者が書いた URL に限る（プロンプトインジェクション対策） ----
+
+
+def url_ctx(*user_messages: str, other: tuple[str, ...] = ()) -> SimpleNamespace:
+    from google.genai import types
+
+    def event(author: str, text: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            author=author, content=types.Content(role="user", parts=[types.Part(text=text)])
+        )
+
+    events = [event("user", m) for m in user_messages] + [
+        event("job_posting_agent", m) for m in other
+    ]
+    return SimpleNamespace(user_id=ALICE, session=SimpleNamespace(events=events), user_content=None)
+
+
+def test_urls_given_by_user_extracts_urls_next_to_japanese() -> None:
+    c = url_ctx("https://jobs.example.com/123を見て。", "これも https://e.com/a?b=1&c=2), お願い")
+    assert tools.urls_given_by_user(c) == {  # type: ignore[arg-type]
+        "https://jobs.example.com/123",
+        "https://e.com/a?b=1&c=2",
+    }
+
+
+async def test_fetch_url_rejects_url_not_written_by_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    called: list[str] = []
+
+    async def fake_fetch(url: str, **_: object) -> object:
+        called.append(url)
+        return SimpleNamespace(url=url, title="t", text="本文", truncated=False)
+
+    monkeypatch.setattr(tools, "fetch_page", fake_fetch)
+    # 利用者が書いたのは求人ページの URL だけ。エージェント（やページの中身）が出した URL は対象外
+    c = url_ctx(
+        "https://jobs.example.com/123 をまとめて",
+        other=("https://evil.example/collect?data=secret",),
+    )
+
+    ok = await tools.fetch_job_posting_from_url(" https://jobs.example.com/123 ", c)  # type: ignore[arg-type]
+    assert ok["status"] == "ok"
+
+    for bad in (
+        "https://evil.example/collect?data=secret",  # 利用者のデータを載せた URL
+        "https://jobs.example.com/123?leak=secret",  # 利用者の URL に何かを付け足したもの
+        "https://jobs.example.com/",  # 利用者の URL の一部
+    ):
+        result = await tools.fetch_job_posting_from_url(bad, c)  # type: ignore[arg-type]
+        assert result["status"] == "error", bad
+    assert called == ["https://jobs.example.com/123"]

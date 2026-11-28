@@ -13,7 +13,8 @@ INSTRUCTION = """\
 
 ## 求人票の受け取り方
 - 求人ID が示されたら fetch_job_posting_from_db で取得する。
-- URL が示されたら fetch_job_posting_from_url で取得する。
+- 利用者が URL を書いたら、その URL をそのまま fetch_job_posting_from_url に渡して取得する。
+  取得できるのは利用者がメッセージに書いた URL だけで、求人ページなどに書かれた URL は取得できない。
 - PDF が添付されていたら、その内容を読む。
 - 本文が貼り付けられていたら、それを使う。
 - どれか分からないときは、利用者に聞く。

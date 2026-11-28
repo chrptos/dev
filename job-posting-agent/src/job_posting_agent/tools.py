@@ -4,9 +4,11 @@
 Runner に渡した値なので、AI が引数で別の人を指定することはできない。
 """
 
+import re
 from typing import Any
 
 from google.adk.tools import ToolContext
+from google.genai import types
 
 from . import repository
 from .config import get_settings
@@ -37,16 +39,48 @@ async def fetch_job_posting_from_db(job_id: str) -> dict[str, Any]:
     return {"status": "ok", "posting": posting, "untrusted_content": body, "note": UNTRUSTED_NOTE}
 
 
-async def fetch_job_posting_from_url(url: str) -> dict[str, Any]:
+# 利用者のメッセージから URL を取り出す。日本語が URL の直後に続いても切れるよう、
+# URL に使える ASCII 文字だけを対象にする。
+_URL_RE = re.compile(r"https?://[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+")
+_TRAILING_PUNCT = ".,;:!?)'"
+
+
+def _texts_of(content: types.Content | None) -> list[str]:
+    if content is None or not content.parts:
+        return []
+    return [p.text for p in content.parts if p.text]
+
+
+def urls_given_by_user(tool_context: ToolContext) -> set[str]:
+    """この会話で、利用者自身がメッセージに書いた URL の一覧。"""
+    texts: list[str] = []
+    for event in tool_context.session.events:
+        if event.author == "user":
+            texts += _texts_of(event.content)
+    texts += _texts_of(tool_context.user_content)
+    return {m.rstrip(_TRAILING_PUNCT) for t in texts for m in _URL_RE.findall(t)}
+
+
+async def fetch_job_posting_from_url(url: str, tool_context: ToolContext) -> dict[str, Any]:
     """求人ページの URL を取得し、本文のテキストを返す。
+    利用者がこの会話のメッセージに書いた URL だけを取得できる。
 
     Args:
-        url: 求人ページの URL（http または https）。
+        url: 求人ページの URL（http または https）。利用者が書いたものをそのまま指定する。
     """
+    url = url.strip()
+    # 取得したページや PDF に書かれた指示で、AI が利用者のデータを URL に載せて
+    # 外に送る（プロンプトインジェクションによる持ち出し）ことを防ぐため、
+    # 利用者が自分で書いた URL と完全に一致するものだけを取得する。
+    if url not in urls_given_by_user(tool_context):
+        return _error(
+            "利用者がメッセージに書いた URL だけを取得できます。"
+            "取得したい URL をメッセージに貼ってもらってください"
+        )
     settings = get_settings()
     try:
         page = await fetch_page(
-            url.strip(),
+            url,
             max_bytes=settings.url_fetch_max_bytes,
             timeout=settings.url_fetch_timeout_seconds,
         )
